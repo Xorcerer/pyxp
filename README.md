@@ -15,6 +15,8 @@ or
 
 ```python
 
+from pyxp import val, from_json, context
+
 # Functions and variables sharing the same namespace.
 context_ = context(
     a=10,
