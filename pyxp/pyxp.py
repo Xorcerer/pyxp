@@ -3,7 +3,7 @@ import operator
 
 
 class Node(object):
-    def calc(self, context):
+    def calc(self, context_):
         raise NotImplementedError()
 
     def to_lisp_code(self):
@@ -15,11 +15,15 @@ class Node(object):
     def to_json(self):
         return json_lib.dumps(self.to_dict())
 
+    def __str__(self):
+        return self.to_lisp_code()
+
+
 class Literal(Node):
     def __init__(self, value):
         self.value = value
 
-    def calc(self, context):
+    def calc(self, context_):
         return self.value
 
     def to_lisp_code(self):
@@ -40,8 +44,8 @@ class Variable(Node):
     def __init__(self, var_name):
         self.var_name = var_name
 
-    def calc(self, context):
-        return context[self.var_name]
+    def calc(self, context_):
+        return context_[self.var_name]
 
     def to_lisp_code(self):
         return self.var_name
@@ -62,9 +66,9 @@ class Function(Node):
         self.func_name = func_name
         self.params = params
 
-    def calc(self, context):
-        f = context[self.func_name]
-        params = [p.calc(context) for p in self.params]
+    def calc(self, context_):
+        f = context_[self.func_name]
+        params = [p.calc(context_) for p in self.params]
         return f(*params)
 
     def to_lisp_code(self):
@@ -103,8 +107,8 @@ class Factor(object):
         value = Function(symbol, [self.value, self.to_node(other)])
         return Factor(symbol, value)
 
-    def calc(self, context):
-        return self.value.calc(context)
+    def calc(self, context_):
+        return self.value.calc(context_)
 
     def to_dict(self):
         return self.value.to_dict()
@@ -141,15 +145,19 @@ def make_op_method(symbol, name):
     f.__name__ = name
     return f
 
-for symbol, func in DEFAULT_CONTEXT.items():
-    method_name = '__%s__' % func.__name__
 
-    # Add built-in methods to factors.
-    # def __add__(self, other):
-    #    return self.op('+', other)
-    f = make_op_method(symbol, method_name)
+def update_factor_class():
+    for symbol, func in DEFAULT_CONTEXT.items():
+        method_name = '__%s__' % func.__name__
 
-    setattr(Factor, method_name, f)
+        # Add built-in methods to factors.
+        # def __add__(self, other):
+        #    return self.op('+', other)
+        f = make_op_method(symbol, method_name)
+
+        setattr(Factor, method_name, f)
+
+update_factor_class()
 
 
 def context(context_dict__=None, **kwargs):
@@ -168,8 +176,8 @@ class FactorFactory(object):
     def __call__(self, value):
         return Factor(None, Literal(value))
 
-
 val = FactorFactory()
+
 
 def from_dict(d):
     node_type = types[d['type']]
@@ -178,4 +186,3 @@ def from_dict(d):
 
 def from_json(json_str):
     return from_dict(json_lib.loads(json_str))
-

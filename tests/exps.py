@@ -88,4 +88,4 @@ def test_complex_exps():
     b = val.b
 
     t(double(a + b) + add(a, b) - my_sum(a, b), 24)
-    t(my_sum(1, 2, 3, 4, 5), 15)
+    t(my_sum(1, 2, 3, 4, a - b, my_sum(a, b)), 30)
