@@ -3,6 +3,12 @@ import operator
 
 
 class Node(object):
+    def calc(self, context):
+        raise NotImplementedError()
+
+    def to_lisp_code(self):
+        raise NotImplementedError()
+
     def to_dict(self):
         raise NotImplementedError()
 
@@ -95,22 +101,7 @@ class Factor(object):
 
     def op(self, symbol, other):
         value = Function(symbol, [self.value, self.to_node(other)])
-        return Factor(None, value)
-
-    def __add__(self, other):
-        return self.op('+', other)
-
-    def __sub__(self, other):
-        return self.op('-', other)
-
-    def __mul__(self, other):
-        return self.op('*', other)
-
-    def __div__(self, other):
-        return self.op('/', other)
-
-    def __pow__(self, power, modulo=None):
-        return self.op('**', power)
+        return Factor(symbol, value)
 
     def calc(self, context):
         return self.value.calc(context)
@@ -133,17 +124,52 @@ class Factor(object):
         return Literal(token)
 
 
+DEFAULT_CONTEXT = {
+    '+': operator.add,
+    '-': operator.sub,
+    '*': operator.mul,
+    '/': operator.div,
+    '**': operator.pow,
+    '<<': operator.lshift,
+    '>>': operator.rshift,
+}
+
+
+def make_op_method(symbol, name):
+    def f(self, other):
+        return self.op(symbol, other)
+    f.__name__ = name
+    return f
+
+for symbol, func in DEFAULT_CONTEXT.items():
+    method_name = '__%s__' % func.__name__
+
+    # Add built-in methods to factors.
+    # def __add__(self, other):
+    #    return self.op('+', other)
+    f = make_op_method(symbol, method_name)
+
+    setattr(Factor, method_name, f)
+
+
+def context(context_dict__=None, **kwargs):
+    r = dict(DEFAULT_CONTEXT)
+    if context_dict__:
+        r.update(context_dict__)
+    if kwargs:
+        r.update(kwargs)
+    return r
+
+
 class FactorFactory(object):
     def __getattr__(self, item):
         return Factor(item)
 
-    def __literal(self, value):
+    def __call__(self, value):
         return Factor(None, Literal(value))
 
 
-var = FactorFactory()
-val = var.__literal
-
+val = FactorFactory()
 
 def from_dict(d):
     node_type = types[d['type']]
@@ -153,18 +179,3 @@ def from_dict(d):
 def from_json(json_str):
     return from_dict(json_lib.loads(json_str))
 
-
-DEFAULT_CONTEXT = {
-    '+': operator.add,
-    '-': operator.sub,
-    '*': operator.mul,
-    '/': operator.div,
-    '**': operator.pow,
-    '<<': operator.ilshift,
-    '>>': operator.irshift,
-}
-
-def context(context_dict):
-    r = dict(DEFAULT_CONTEXT)
-    r.update(context_dict)
-    return r
