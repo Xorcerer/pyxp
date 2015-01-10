@@ -1,12 +1,13 @@
-import json
+import json as json_lib
+import operator
 
 
 class Node(object):
-    @staticmethod
-    def from_json(json):
-        node_type = types[json['type']]
-        return node_type.from_json(json)
+    def to_dict(self):
+        raise NotImplementedError()
 
+    def to_json(self):
+        return json_lib.dumps(self.to_dict())
 
 class Literal(Node):
     def __init__(self, value):
@@ -15,15 +16,15 @@ class Literal(Node):
     def calc(self, context):
         return self.value
 
-    def to_code(self):
+    def to_lisp_code(self):
         return str(self.value)
 
-    def to_json(self):
+    def to_dict(self):
         return {'type': 'Literal', 'value': self.value}
 
     @staticmethod
-    def from_json(json):
-        return Literal(json['value'])
+    def from_dict(d):
+        return Literal(d['value'])
 
     def __repr__(self):
         return 'Literal(%s)' % self.value
@@ -36,15 +37,15 @@ class Variable(Node):
     def calc(self, context):
         return context[self.var_name]
 
-    def to_code(self):
+    def to_lisp_code(self):
         return self.var_name
 
-    def to_json(self):
+    def to_dict(self):
         return {'type': 'Variable', 'var_name': self.var_name}
 
     @staticmethod
-    def from_json(json):
-        return Variable(json['var_name'])
+    def from_dict(d):
+        return Variable(d['var_name'])
 
     def __repr__(self):
         return 'Variable(%s)' % self.var_name
@@ -60,21 +61,21 @@ class Function(Node):
         params = [p.calc(context) for p in self.params]
         return f(*params)
 
-    def to_code(self):
-        params_str = ' '.join([p.to_code() for p in self.params])
+    def to_lisp_code(self):
+        params_str = ' '.join([p.to_lisp_code() for p in self.params])
         return '(%s %s)' % (self.func_name, params_str)
 
-    def to_json(self):
+    def to_dict(self):
         return {'type': 'Function', 'func_name': self.func_name,
-                'params': [p.to_json() for p in self.params]}
+                'params': [p.to_dict() for p in self.params]}
 
     @staticmethod
-    def from_json(json):
-        return Function(json['func_name'],
-                        params=[Node.from_json(p) for p in json['params']])
+    def from_dict(d):
+        return Function(d['func_name'],
+                        params=[from_dict(p) for p in d['params']])
 
     def __repr__(self):
-        return self.to_code()
+        return self.to_lisp_code()
 
 types = {
     'Literal': Literal,
@@ -108,14 +109,20 @@ class Factor(object):
     def __div__(self, other):
         return self.op('/', other)
 
+    def __pow__(self, power, modulo=None):
+        return self.op('**', power)
+
     def calc(self, context):
         return self.value.calc(context)
+
+    def to_dict(self):
+        return self.value.to_dict()
 
     def to_json(self):
         return self.value.to_json()
 
-    def to_code(self):
-        return self.value.to_code()
+    def to_lisp_code(self):
+        return self.value.to_lisp_code()
 
     @staticmethod
     def to_node(token):
@@ -130,47 +137,34 @@ class FactorFactory(object):
     def __getattr__(self, item):
         return Factor(item)
 
-    def literal(self, value):
+    def __literal(self, value):
         return Factor(None, Literal(value))
 
-    v = literal
-    value = literal
+
+var = FactorFactory()
+val = var.__literal
 
 
-def build_exp1():
-    ff = FactorFactory()
-    f = ff.f
-    g = ff.g
-    a = ff.a
-
-    return f(10, 10) + g(f(a + 1, 2)) + 1
+def from_dict(d):
+    node_type = types[d['type']]
+    return node_type.from_dict(d)
 
 
-def test1():
-    exp = build_exp1()
-
-    context = {
-        '+': lambda x, y: x + y,
-        'f': lambda x, y: x * y,
-        'g': lambda x: x * 2,
-        'a': 1
-    }
-
-    print exp.to_code()
-    result = exp.calc(context)
-    assert result == 109
+def from_json(json_str):
+    return from_dict(json_lib.loads(json_str))
 
 
-def test2():
-    exp1 = build_exp1()
+DEFAULT_CONTEXT = {
+    '+': operator.add,
+    '-': operator.sub,
+    '*': operator.mul,
+    '/': operator.div,
+    '**': operator.pow,
+    '<<': operator.ilshift,
+    '>>': operator.irshift,
+}
 
-    json_str = json.dumps(exp1.to_json())
-
-    exp2 = Node.from_json(json.loads(json_str))
-
-    assert exp1.to_code() == exp2.to_code()
-
-
-if __name__ == '__main__':
-    test1()
-    test2()
+def context(context_dict):
+    r = dict(DEFAULT_CONTEXT)
+    r.update(context_dict)
+    return r
