@@ -14,7 +14,7 @@ setup(
 
     description='A library for construct arithmetic expression in python, '
     'which could be serialize to and deserialize from string',
-    long_description='',
+    long_description='Go https://github.com/Xorcerer/pyxp for more details.',
 
     url='https://github.com/Xorcerer/pyxp',
 

@@ -1,6 +1,4 @@
 from functools import partial
-import json
-
 from pyxp import val, from_json, context
 
 
