@@ -27,7 +27,7 @@ b = val.b
 
 exp = double(a + b) + add(a, b) - (val.my_sum(a, b) << 1)
 
-# Serialize to string, so you could send over network. 
+# Serialize to string, so you could send it over network. 
 json_str = exp.to_json()
 
 # Deserialization
@@ -36,7 +36,8 @@ exp_deserialized = from_json(json_str)
 
 ### Calculation
 
-```
+```python
+
 # Functions and variables sharing the same namespace.
 context_ = context(
     a=10,
