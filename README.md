@@ -2,6 +2,8 @@
 Python library for construct arithmetic expression (including function calls),
 which can be serialize to/deserialize from json.
 
+# Cases
+* *DUST 514* of *CCP*, on PlayStation, used for formula updating.
 
 ## Installation
 
