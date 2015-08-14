@@ -1,6 +1,6 @@
 # pyxp
 Python library for construct arithmetic expression (including function calls),
-which can be serialize to/deserialize from json.
+which can be serialized to/deserialized from json.
 
 # Cases
 * *DUST 514* of *CCP*, on PlayStation, used for formula updating.
